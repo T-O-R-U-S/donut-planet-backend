@@ -1,0 +1,18 @@
+### Test logins
+POST http://localhost:8080/login
+Content-Type: application/json
+
+{
+  "email" : "joemama@mail.com",
+  "password": "12345"
+}
+
+### Test signups
+POST http://localhost:8080/signup
+Content-Type: application/json
+
+{
+  "username": "joe",
+  "email": "joemama@mail.com",
+  "password": "1234"
+}
