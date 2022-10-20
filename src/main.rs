@@ -86,8 +86,8 @@ async fn signup(data: Data<Pool<MySql>>, form: Json<SignupDetails>) -> Result<im
     match query.simplified() {
         Ok(user) => println!("{user:#?}"),
         Err(SqlError::RowConflict) => {
-                return Ok(HttpResponse::Conflict()
-                    .body("Username or email already taken."))
+                return Err(HttpResponse::Conflict()
+                    .body("Username or email already taken.").into())
         }
         Err(e) => {
             println!("{e:#?}");
@@ -116,11 +116,11 @@ async fn login(data: Data<Pool<MySql>>, form: Json<LoginDetails>) -> Result<impl
 
     let query = match query.simplified() {
         Ok(user) => user,
-        Err(SqlError::NonExistentRow) => return Ok(
+        Err(SqlError::NonExistentRow) => return Err(
             HttpResponse::NotFound()
-                .finish()
+                .into()
         ),
-        _ => return Ok(HttpResponse::InternalServerError().finish())
+        _ => return Err(HttpResponse::InternalServerError().into())
     };
 
     if bcrypt::verify(&form.password, &query.password_hash)? {
@@ -140,9 +140,10 @@ async fn create_post(req: HttpRequest, data: Data<Pool<MySql>>, form: Json<PostD
     let mut database = data.get_db().await?;
 
     let auth_session = match req.cookie("auth") {
-        None => return Ok(
+        None => return Err(
             HttpResponse::Forbidden()
                 .body("You must log in to post!")
+                .into()
         ),
         Some(cookie) => cookie.value().to_string()
     };
@@ -159,9 +160,10 @@ async fn create_post(req: HttpRequest, data: Data<Pool<MySql>>, form: Json<PostD
 
     let user_id = match query {
         Ok(row) => row.id,
-        Err(sqlx::Error::RowNotFound) => return Ok(
+        Err(sqlx::Error::RowNotFound) => return Err(
             HttpResponse::BadRequest()
                 .finish()
+                .into()
         ),
         Err(e) => return Err(e.into())
     };
@@ -193,26 +195,20 @@ async fn get_post(data: Data<Pool<MySql>>, id: web::Path<u64>) -> Result<impl Re
         .fetch_one(&mut database)
         .await;
 
-    let post = match query {
+    let post = match query.simplified() {
         Ok(post) => post,
-        Err(e) => {
-            return match SqlError::from(e) {
-                SqlError::NonExistentRow => {
-                    Ok(
-                        HttpResponse::NotFound().finish()
-                    )
-                }
-                _ => Ok(
-                    HttpResponse::InternalServerError().finish()
-                )
-            }
-        }
+        Err(SqlError::NonExistentRow) => return Err(
+            HttpResponse::NotFound().into()
+        ),
+        _ => return Err(
+            HttpResponse::InternalServerError().into()
+        )
     };
 
     Ok(
         HttpResponse::Ok().json(
             PostData {
-                title: post.title.unwrap_or("".into()),
+                title: post.title.unwrap_or("Blank".into()),
                 content: post.content.unwrap_or("".into()),
                 author: Some(post.user)
             }
@@ -238,8 +234,8 @@ async fn get_user(data: Data<Pool<MySql>>, id: web::Path<u64>) -> Result<impl Re
     let user = match query.simplified() {
         Ok(user) => user,
         Err(SqlError::NonExistentRow) => {
-            return Ok(
-                HttpResponse::NotFound().finish()
+            return Err(
+                HttpResponse::NotFound().into()
             )
         }
         Err(e) => return Err(e.into())

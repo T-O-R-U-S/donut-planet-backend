@@ -1,6 +1,7 @@
 use std::fmt::{Display, Formatter};
 use actix_web::ResponseError;
 use thiserror::Error;
+use crate::HttpError;
 
 #[derive(Debug, Error)]
 pub enum Error {
@@ -28,6 +29,11 @@ pub enum Error {
     SimplifiedSql {
         #[from]
         source: SqlError
+    },
+    #[error("{}", .source)]
+    HttpError {
+        #[from]
+        source: HttpError
     }
 }
 
