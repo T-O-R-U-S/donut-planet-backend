@@ -3,16 +3,27 @@ POST http://localhost:8080/login
 Content-Type: application/json
 
 {
-  "email" : "joemama@mail.com",
-  "password": "12345"
+  "email" : "joeymama@mail.com",
+  "password": "1234"
+}
+
+### Test logging in for a nonexistent account (should error)
+POST http://localhost:8080/login
+Content-Type: application/json
+
+{
+  "email": "idontexist@mail.com",
+  "password": "uhhh"
 }
 
 ### Test signups
 POST http://localhost:8080/signup
 Content-Type: application/json
 
+# Will return an error -- user already exists
+
 {
-  "username": "joe",
-  "email": "joemama@mail.com",
+  "username": "joey",
+  "email": "joeymama@mail.com",
   "password": "1234"
 }

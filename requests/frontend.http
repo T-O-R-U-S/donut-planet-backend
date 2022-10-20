@@ -1,0 +1,2 @@
+### Test fetching the home page
+GET http://localhost:8080/

@@ -4,7 +4,10 @@ create table users(
                       profile_picture VARCHAR(255),
                       bio VARCHAR(255) NULL,
                       email VARCHAR(255) CHARACTER SET utf8 COLLATE utf8_unicode_520_ci NOT NULL UNIQUE,
-                      password_hash TEXT NOT NULL
+                      password_hash CHAR(60) NOT NULL,
+                      auth_token VARCHAR(255) NOT NULL,
+                      verified BOOLEAN DEFAULT FALSE,
+                      CHECK ( email REGEXP '^[a-zA-Z0-9][a-zA-Z0-9.!#$%&\'*+-/=?^_`{|}~]*?[a-zA-Z0-9._-]?@[a-zA-Z0-9][a-zA-Z0-9._-]*?[a-zA-Z0-9]?\\.[a-zA-Z]{2,63}$')
 );
 
 create table posts(
@@ -12,6 +15,7 @@ create table posts(
                       user BIGINT UNSIGNED NOT NULL,
                       title VARCHAR(255),
                       content TEXT,
+                      creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                       FOREIGN KEY (user) REFERENCES users(id)
 );
 
@@ -20,6 +24,7 @@ create table comments(
     user_id BIGINT UNSIGNED NOT NULL,
     post_id BIGINT UNSIGNED NOT NULL,
     content TEXT,
+    creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) references users(id),
     FOREIGN KEY (post_id) references posts(id)
 );

@@ -1,0 +1,12 @@
+### Create a post
+POST localhost:8080/post
+Content-Type: application/json
+
+{
+  "title": "Industrial Society and Its Consequences",
+  "content": "Lorem Ipsum Dolor Sit Amet"
+}
+
+### Fetch a post (should return Industrial Society and Its Consequences)
+GET localhost:8080/post/1
+
