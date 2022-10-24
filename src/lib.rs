@@ -3,9 +3,8 @@
 mod errors;
 
 use actix_web::web;
-use sqlx::{Error, MySql, Pool};
+use sqlx::{MySql, Pool};
 use sqlx::pool::PoolConnection;
-use crate::errors::SqlError;
 
 pub trait GetDatabase {
     async fn get_db(self) -> Result<PoolConnection<MySql>, sqlx::Error>;

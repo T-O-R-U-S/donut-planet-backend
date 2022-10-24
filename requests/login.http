@@ -1,5 +1,5 @@
 ### Test logins
-POST http://localhost:8080/login
+POST http://localhost:8080/api/login
 Content-Type: application/json
 
 {
@@ -8,7 +8,7 @@ Content-Type: application/json
 }
 
 ### Test logging in for a nonexistent account (should error)
-POST http://localhost:8080/login
+POST http://localhost:8080/api/login
 Content-Type: application/json
 
 {
@@ -17,7 +17,7 @@ Content-Type: application/json
 }
 
 ### Test signups
-POST http://localhost:8080/signup
+POST http://localhost:8080/api/signup
 Content-Type: application/json
 
 # Will return an error -- user already exists

@@ -15,3 +15,8 @@ serde = { version = "1.0.145", features = ["derive"] }
 bcrypt = "0.13.0"
 thiserror = "1.0.37"
 jsonwebtoken = "8.1.1"
+futures = "0.3.25"
+env_logger = "0.9.1"
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3

@@ -1,5 +1,5 @@
 ### Create a post
-POST localhost:8080/post
+POST localhost:8080/api/post
 Content-Type: application/json
 
 {
@@ -8,5 +8,10 @@ Content-Type: application/json
 }
 
 ### Fetch a post (should return Industrial Society and Its Consequences)
-GET localhost:8080/post/1
+GET localhost:8080/api/post/1
 
+### Recommend some posts (randomly selected, for now)
+GET localhost:8080/api/post
+
+### Fetch a non-existent (*hopefully) post
+GET localhost:8080/api/post/999999999
