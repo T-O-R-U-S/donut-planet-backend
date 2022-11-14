@@ -7,6 +7,15 @@ Content-Type: application/json
   "content": "Lorem Ipsum Dolor Sit Amet"
 }
 
+### Edit a post
+POST localhost:8080/api/post/1
+Content-Type: application/json
+
+{
+  "title": "Actually, the unabomber might've been bad?",
+  "content": "uhhh"
+}
+
 ### Fetch a post (should return Industrial Society and Its Consequences)
 GET localhost:8080/api/post/1
 
@@ -15,3 +24,12 @@ GET localhost:8080/api/post
 
 ### Fetch a non-existent (*hopefully) post
 GET localhost:8080/api/post/999999999
+
+### Like a post
+POST localhost:8080/api/like/1
+
+### Dislike a post
+POST localhost:8080/api/dislike/1
+
+### Fetch a post's likes
+GET localhost:8080/api/like/1

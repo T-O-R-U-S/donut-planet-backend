@@ -24,3 +24,7 @@ JWT authentication, so it's important that you create them.
 
 These are imported as compile-time constants, so if they are missing,
 the program will not compile.
+
+## What is Donut Planet?
+
+It's going to be a social media platform where the 'gimmick' is that you have to earn Sprinkles to progress.

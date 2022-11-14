@@ -17,6 +17,7 @@ thiserror = "1.0.37"
 jsonwebtoken = "8.1.1"
 futures = "0.3.25"
 env_logger = "0.9.1"
+chrono = { version = "0.4.22", features = ["serde"]}
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3

@@ -1,43 +1,49 @@
 use std::borrow::Borrow;
+use std::fmt::{Display, Formatter};
+
 use std::str;
 use actix_web::{HttpResponse, HttpResponseBuilder, ResponseError};
 use actix_web::body::{BoxBody, MessageBody};
 use actix_web::http::StatusCode;
+use jsonwebtoken::errors::ErrorKind;
+use sqlx::mysql::MySqlQueryResult;
 use thiserror::Error as ErrorTrait;
 
 #[derive(Debug, ErrorTrait)]
 pub enum Error {
-    #[error("Internal error.")]
+    #[error("{}", .source)]
     Sqlx {
         #[from]
         source: sqlx::Error
     },
-    #[error("Internal error.")]
+    #[error("{}", .source)]
     Bcyrpt {
         #[from]
         source: bcrypt::BcryptError
     },
     // Errors thrown by
-    #[error("Couldn't retrieve token.")]
+    #[error("{}", .source)]
     Jwt {
         #[from]
         source: jsonwebtoken::errors::Error
     },
-    #[error("Internal error.")]
+    #[error("{}", .source)]
     IO {
         #[from]
         source: std::io::Error
     },
-    #[error("Internal error.")]
+    #[error("{}", .source)]
     SimplifiedSql {
         #[from]
         source: SqlError
     },
-    #[error("{}", code.canonical_reason().unwrap_or("Internal error."))]
+    #[error("Code: {}\nBody: {}\n{:?}", .code, .body, code.canonical_reason().unwrap_or("Internal error."))]
     HttpStatus {
         code: StatusCode,
         body: String
-    }
+    },
+    #[error("This part of Donut Planet is yet to be implemented.")]
+    Unimplemented
 }
 
 impl From<HttpResponse> for Error {
@@ -95,19 +101,35 @@ pub enum SqlError {
 }
 
 impl SqlError {
-    pub fn not_found(error_msg: &str) -> impl Fn(sqlx::Error) -> Error + '_ {
+    fn error_function_factory(sql_error: SqlError, error_msg: &str) -> impl Fn(Error) -> Error + '_ {
         move |error| {
-            let error = SqlError::from(error);
+            let Error::Sqlx { source } = error else {
+                panic!("Unexpected error type {error:?} for SQL error")
+            };
 
-            if error == SqlError::NonExistentRow {
+            let source = SqlError::from(source);
+
+            if source == sql_error {
                 Error::HttpStatus {
                     code: StatusCode::NOT_FOUND,
                     body: error_msg.to_string()
                 }
             } else {
-                Error::from(error)
+                Error::from(source)
             }
         }
+    }
+
+    pub fn not_found(error_msg: &str) -> impl Fn(Error) -> Error + '_ {
+        SqlError::error_function_factory(SqlError::NonExistentRow, error_msg)
+    }
+
+    pub fn conflict(error_msg: &str) -> impl Fn(Error) -> Error + '_ {
+        SqlError::error_function_factory(SqlError::RowConflict, error_msg)
+    }
+
+    pub fn constraint_fail(error_msg: &str) -> impl Fn(Error) -> Error + '_ {
+        SqlError::error_function_factory(SqlError::ConstraintFailed, error_msg)
     }
 }
 
@@ -132,6 +154,9 @@ impl<E> From<E> for SqlError
     where E: Borrow<sqlx::Error> {
     fn from(value: E) -> Self {
         match value.borrow() {
+            // WARN: SQLSTATE will be 23000 for a foreign key constraint fail instead of HY000.
+            // Sqlx doesn't seem to have an API to get the error number, so there is no way to
+            // distinguish between them.
             sqlx::Error::Database(error) if error.code() == Some("23000".into()) => {
                 SqlError::RowConflict
             }
@@ -141,14 +166,14 @@ impl<E> From<E> for SqlError
             sqlx::Error::RowNotFound => {
                 SqlError::NonExistentRow
             }
+            sqlx::Error::ColumnNotFound(_) => {
+                SqlError::NonExistentCol
+            }
             sqlx::Error::Configuration(_) => {
                 SqlError::InvalidConfig
             }
             sqlx::Error::ColumnIndexOutOfBounds { .. } => {
                 SqlError::OutOfBoundsIndex
-            }
-            sqlx::Error::ColumnNotFound(_) => {
-                SqlError::NonExistentCol
             }
             sqlx::Error::PoolTimedOut | sqlx::Error::PoolClosed => SqlError::PoolError,
             _ => SqlError::Other,
@@ -185,14 +210,28 @@ impl ResponseError for Error {
     }
 
     fn error_response(&self) -> HttpResponse<BoxBody> {
-        let error_msg = self.status_code().canonical_reason().unwrap_or("Undefined error.");
-
-        let body = if let Error::HttpStatus { body, .. } = self {
-            Some(body.as_str())
-        } else {
-            None
-        }.unwrap_or(error_msg);
-
-        HttpResponse::with_body(self.status_code(), BoxBody::new(body.to_string()))
+        match self {
+            Error::Sqlx { source } => SqlError::from(source).error_response(),
+            Error::Jwt { source } => {
+                match source.kind() {
+                    ErrorKind::MissingRequiredClaim(_) |
+                    ErrorKind::InvalidToken |
+                    ErrorKind::ExpiredSignature |
+                    ErrorKind::InvalidIssuer |
+                    ErrorKind::InvalidAudience |
+                    ErrorKind::InvalidSubject |
+                    ErrorKind::ImmatureSignature |
+                    ErrorKind::Base64(_) |
+                    ErrorKind::Json(_) |
+                    ErrorKind::Utf8(_) => { HttpResponse::BadRequest().body(format!("{self}")) }
+                    _ => { HttpResponse::InternalServerError().finish() }
+                }
+            }
+            Error::SimplifiedSql { source } => source.error_response(),
+            Error::HttpStatus { code, body } => HttpResponse::with_body(*code, BoxBody::new(body.to_string())),
+            Error::Bcyrpt { .. } => HttpResponse::InternalServerError().finish(),
+            Error::IO { .. } => HttpResponse::InternalServerError().finish(),
+            Error::Unimplemented => HttpResponse::ServiceUnavailable().body(self.to_string())
+        }
     }
 }

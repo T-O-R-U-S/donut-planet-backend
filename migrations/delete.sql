@@ -1,4 +1,4 @@
 drop table comments;
-drop table likes;
+drop table ratings;
 drop table posts;
 drop table users;
